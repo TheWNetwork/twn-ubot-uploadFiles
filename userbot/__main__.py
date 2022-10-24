@@ -27,7 +27,11 @@ async def main():
     async with app:
         files = os.listdir(config.document_root)
         files = [f for f in files if os.path.isfile(config.document_root + '/' + f)]  # Filtering only the files.
-        schedule = datetime.datetime.now()
+
+        if config.start_date:
+            schedule = datetime.datetime.strptime(config.start_date, '%Y-%m-%d %H:%M:%S')
+        else:
+            schedule = datetime.datetime.now()
 
         for x in files:
             schedule = schedule + datetime.timedelta(hours=config.interval)
