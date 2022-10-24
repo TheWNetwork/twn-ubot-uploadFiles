@@ -1,9 +1,10 @@
+# -*- encoding: utf-8 -*-
 """Main module"""
 import os
 import config
 import datetime
 import logging
-from pyrogram import Client
+from pyrogram import Client, enums
 
 logging.basicConfig(level=logging.ERROR)
 app = Client(
@@ -45,7 +46,8 @@ async def main():
                     chat_id=int(config.chat_id),
                     photo=config.document_root + '/' + x,
                     schedule_date=schedule,
-                    caption=config.caption
+                    caption=config.caption,
+                    parse_mode=enums.ParseMode.HTML
                 )
             elif extension == 'mp4' or extension == 'mkv' or extension == 'avi' or extension == 'mov':
                 await app.send_video(
@@ -53,7 +55,8 @@ async def main():
                     video=config.document_root + '/' + x,
                     schedule_date=schedule,
                     caption=config.caption,
-                    progress=progress
+                    progress=progress,
+                    parse_mode=enums.ParseMode.HTML
                 )
                 difference = datetime.datetime.now() - startedat
                 speed = round(size / int(difference.total_seconds()), 2)
