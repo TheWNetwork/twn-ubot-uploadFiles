@@ -126,3 +126,5 @@ dmypy.json
 .idea/
 /docs/
 /userbot/bot.session
+
+userbot/bot.session-journal
