@@ -5,6 +5,7 @@ import dotenv
 
 dotenv.load_dotenv()
 
+
 def get_env(key, needed=False, default=None):
     """Get an env var or return exception."""
     if needed and key not in os.environ:

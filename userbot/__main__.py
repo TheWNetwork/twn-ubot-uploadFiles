@@ -7,7 +7,7 @@ import config
 import datetime
 import logging
 from pyrogram import Client, enums
-from pyrogram.types import InputMediaPhoto
+from pyrogram.types import InputMediaPhoto, InputMediaVideo
 
 logging.basicConfig(level=logging.ERROR)
 app = Client(
@@ -51,7 +51,7 @@ async def main():
         for x in files:
             if not in_exe:
                 if config.interval != 0:
-                    schedule = schedule + datetime.timedelta(hours=config.interval)
+                    schedule = schedule + datetime.timedelta(minutes=config.interval)
                 else:
                     schedule = schedule + datetime.timedelta(seconds=60)
 
@@ -61,18 +61,21 @@ async def main():
             print(str(curr) + '/' + str(counter) + ' [' + datetime.datetime.now().strftime(
                 "%d/%m/%Y %H:%M:%S") + '][' + str(size) + 'MB] Uploading ' + x + ' at ' + str(schedule))
             extension = x.split('.')[-1]
-            if curr < counter:
-                n_extension = files[curr + 1].split('.')[-1]
-            else:
+            try:
+                n_extension = files[curr].split('.')[-1]
+            except IndexError:
                 n_extension = None
 
             if extension == 'jpg' or extension == 'png' or extension == 'jpeg':
                 if n_extension == extension and len(n_file) <= 8:
-                    n_file.append(InputMediaPhoto(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
+                    if len(n_file) == 0:
+                        n_file.append(InputMediaPhoto(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
+                    else:
+                        n_file.append(InputMediaPhoto(config.document_root + '/' + x))
                     in_exe = True
                 else:
                     if len(n_file) > 0:
-                        n_file.append(InputMediaPhoto(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
+                        n_file.append(InputMediaPhoto(config.document_root + '/' + x))
                         await app.send_media_group(
                             chat_id=int(config.chat_id),
                             media=n_file,
@@ -88,14 +91,30 @@ async def main():
                             parse_mode=enums.ParseMode.HTML
                         )
             elif extension == 'mp4' or extension == 'mkv' or extension == 'avi' or extension == 'mov':
-                await app.send_video(
-                    chat_id=int(config.chat_id),
-                    video=config.document_root + '/' + x,
-                    schedule_date=schedule,
-                    caption=config.caption,
-                    progress=progress,
-                    parse_mode=enums.ParseMode.HTML
-                )
+                if n_extension == extension and len(n_file) <= 3:
+                    if len(n_file) == 0:
+                        n_file.append(InputMediaVideo(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
+                    else:
+                        n_file.append(InputMediaVideo(config.document_root + '/' + x))
+                    in_exe = True
+                else:
+                    if len(n_file) > 0:
+                        n_file.append(InputMediaVideo(config.document_root + '/' + x))
+                        await app.send_media_group(
+                            chat_id=int(config.chat_id),
+                            media=n_file,
+                            schedule_date=schedule
+                        )
+                        n_file = []
+                    else:
+                        await app.send_video(
+                            chat_id=int(config.chat_id),
+                            video=config.document_root + '/' + x,
+                            schedule_date=schedule,
+                            caption=config.caption,
+                            progress=progress,
+                            parse_mode=enums.ParseMode.HTML
+                        )
             else:
                 await app.send_document(
                     chat_id=int(config.chat_id),
