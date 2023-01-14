@@ -1,10 +1,13 @@
 # -*- encoding: utf-8 -*-
 """Main module"""
 import os
+
+
 import config
 import datetime
 import logging
 from pyrogram import Client, enums
+from pyrogram.types import InputMediaPhoto
 
 logging.basicConfig(level=logging.ERROR)
 app = Client(
@@ -38,27 +41,52 @@ async def main():
             schedule = datetime.datetime.now()
         counter = len(files)
         curr = 0
+        in_exe = False
+        n_file = []
+
+        order_by_extension = ['jpg', 'jpeg', 'png']
+        keys = {k: v for v, k in enumerate(order_by_extension)}
+        sorted(files, key=lambda x: keys.get(os.path.splitext(x)[1].strip('.'), float('inf')))
 
         for x in files:
-            if config.interval != 0:
-                schedule = schedule + datetime.timedelta(hours=config.interval)
-            else:
-                schedule = schedule + datetime.timedelta(seconds=60)
+            if not in_exe:
+                if config.interval != 0:
+                    schedule = schedule + datetime.timedelta(hours=config.interval)
+                else:
+                    schedule = schedule + datetime.timedelta(seconds=60)
 
-            startedat = datetime.datetime.now()
-            size = get_file_size_in_mb(config.document_root + '/' + x)
             curr = curr + 1
-            print(str(curr) + '/' + str(counter) + ' [' + datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '][' + str(size) + 'MB] Uploading ' + x + ' at ' + str(schedule))
+            start_date = datetime.datetime.now()
+            size = get_file_size_in_mb(config.document_root + '/' + x)
+            print(str(curr) + '/' + str(counter) + ' [' + datetime.datetime.now().strftime(
+                "%d/%m/%Y %H:%M:%S") + '][' + str(size) + 'MB] Uploading ' + x + ' at ' + str(schedule))
             extension = x.split('.')[-1]
+            if curr < counter:
+                n_extension = files[curr + 1].split('.')[-1]
+            else:
+                n_extension = None
 
             if extension == 'jpg' or extension == 'png' or extension == 'jpeg':
-                await app.send_photo(
-                    chat_id=int(config.chat_id),
-                    photo=config.document_root + '/' + x,
-                    schedule_date=schedule,
-                    caption=config.caption,
-                    parse_mode=enums.ParseMode.HTML
-                )
+                if n_extension == extension and len(n_file) <= 8:
+                    n_file.append(InputMediaPhoto(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
+                    in_exe = True
+                else:
+                    if len(n_file) > 0:
+                        n_file.append(InputMediaPhoto(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
+                        await app.send_media_group(
+                            chat_id=int(config.chat_id),
+                            media=n_file,
+                            schedule_date=schedule
+                        )
+                        n_file = []
+                    else:
+                        await app.send_photo(
+                            chat_id=int(config.chat_id),
+                            photo=config.document_root + '/' + x,
+                            schedule_date=schedule,
+                            caption=config.caption,
+                            parse_mode=enums.ParseMode.HTML
+                        )
             elif extension == 'mp4' or extension == 'mkv' or extension == 'avi' or extension == 'mov':
                 await app.send_video(
                     chat_id=int(config.chat_id),
@@ -77,16 +105,17 @@ async def main():
                     progress=progress,
                     parse_mode=enums.ParseMode.HTML
                 )
+            if not in_exe:
+                difference = datetime.datetime.now() - start_date
+                if difference.total_seconds() != 0:
+                    speed = round(size / round(difference.total_seconds(), 4), 2)
+                else:
+                    speed = 1
 
-            difference = datetime.datetime.now() - startedat
-            if difference.total_seconds() != 0:
-                speed = round(size / round(difference.total_seconds(), 4), 2)
-            else:
-                speed = 1
-
-            print("\r", 'Finished: ' + x
-                  + '. Size: ' + str(size)
-                  + 'MB ' + str(round(difference.total_seconds(), 4)) + 's at '
-                  + str(speed) + ' MB/s')
+                print("\r", 'Finished: ' + x
+                      + '. Size: ' + str(size)
+                      + 'MB ' + str(round(difference.total_seconds(), 4)) + 's at '
+                      + str(speed) + ' MB/s')
+                in_exe = False
 
 app.run(main())
