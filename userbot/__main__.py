@@ -7,7 +7,7 @@ import config
 import datetime
 import logging
 from pyrogram import Client, enums
-from pyrogram.types import InputMediaPhoto, InputMediaVideo
+from pyrogram.types import InputMediaPhoto, InputMediaVideo, InputMediaDocument
 
 logging.basicConfig(level=logging.ERROR)
 app = Client(
@@ -116,14 +116,31 @@ async def main():
                             parse_mode=enums.ParseMode.HTML
                         )
             else:
-                await app.send_document(
-                    chat_id=int(config.chat_id),
-                    document=config.document_root + '/' + x,
-                    schedule_date=schedule,
-                    caption=config.caption,
-                    progress=progress,
-                    parse_mode=enums.ParseMode.HTML
-                )
+                if n_extension == extension and len(n_file) <= 3:
+                    if len(n_file) == 0:
+                        n_file.append(InputMediaDocument(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
+                    else:
+                        n_file.append(InputMediaDocument(config.document_root + '/' + x))
+                    in_exe = True
+                else:
+                    if len(n_file) > 0:
+                        n_file.append(InputMediaDocument(config.document_root + '/' + x))
+                        await app.send_media_group(
+                            chat_id=int(config.chat_id),
+                            media=n_file,
+                            schedule_date=schedule
+                        )
+                        n_file = []
+                    else:
+                        await app.send_document(
+                            chat_id=int(config.chat_id),
+                            document=config.document_root + '/' + x,
+                            schedule_date=schedule,
+                            caption=config.caption,
+                            progress=progress,
+                            parse_mode=enums.ParseMode.HTML
+                        )
+
             if not in_exe:
                 difference = datetime.datetime.now() - start_date
                 if difference.total_seconds() != 0:
