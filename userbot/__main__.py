@@ -91,7 +91,7 @@ async def main():
                             parse_mode=enums.ParseMode.HTML
                         )
             elif extension == 'mp4' or extension == 'mkv' or extension == 'avi' or extension == 'mov':
-                if n_extension == extension and len(n_file) <= 3:
+                if n_extension == extension and len(n_file) <= 8:
                     if len(n_file) == 0:
                         n_file.append(InputMediaVideo(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
                     else:
@@ -116,7 +116,7 @@ async def main():
                             parse_mode=enums.ParseMode.HTML
                         )
             else:
-                if n_extension == extension and len(n_file) <= 3:
+                if n_extension == extension and len(n_file) <= 8:
                     if len(n_file) == 0:
                         n_file.append(InputMediaDocument(config.document_root + '/' + x, caption=config.caption, parse_mode=enums.ParseMode.HTML))
                     else:
