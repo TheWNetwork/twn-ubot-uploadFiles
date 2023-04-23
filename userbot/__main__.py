@@ -42,9 +42,6 @@ async def main():
         filename = sorted(list(file_list(Config.document_root, set())))
         print(len(filename))
 
-        for f in filename:
-            print(f)
-
         if Config.start_date:
             schedule = datetime.datetime.strptime(Config.start_date, '%Y-%m-%d %H:%M:%S')
         else:
@@ -57,7 +54,10 @@ async def main():
 
         order_by_extension = ['jpg', 'jpeg', 'png']
         keys = {k: v for v, k in enumerate(order_by_extension)}
-        sorted(filename, key=lambda x: keys.get(os.path.splitext(x)[1].strip('.'), float('inf')))
+        filename = sorted(filename, key=lambda x: keys.get(str(x).split('.')[1], float('inf')))
+
+        # for f in filename:
+        #    print(str(f).split('.')[1])
 
         for x in filename:
             if not in_exe:
