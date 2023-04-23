@@ -1,23 +1,15 @@
 # -*- encoding: utf-8 -*-
 """Config vars module"""
 import os
-import dotenv
+from dotenv import load_dotenv
 
-dotenv.load_dotenv()
+load_dotenv()
 
-
-def get_env(key, needed=False, default=None):
-    """Get an env var or return exception."""
-    if needed and key not in os.environ:
-        raise Exception(f"{key} is not set in .env file")
-
-    return os.environ.get(key) or default
-
-
-api_id = get_env(key="API_ID", needed=True)
-api_hash = get_env(key="API_HASH", needed=True)
-document_root = get_env(key="DOCUMENT_ROOT")
-chat_id = get_env(key="CHAT_ID")
-interval = int(get_env(key="INTERVAL"))
-caption = get_env(key="CAPTION")
-start_date = get_env(key="START_DATE")
+class Config(object):
+    api_id = os.environ.get('API_ID')
+    api_hash = os.environ.get('API_HASH')
+    document_root = os.environ.get('DOCUMENT_ROOT')
+    chat_id = os.environ.get('CHAT_ID')
+    interval = int(os.environ.get('INTERVAL'))
+    caption = os.environ.get('CAPTION')
+    start_date = os.environ.get('START_DATE')
