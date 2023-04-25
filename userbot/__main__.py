@@ -36,7 +36,6 @@ def file_list(path, sett):
             sett.add(str(filepath.parent) + "/" + str(filepath.name))
     return sett
 
-
 def resizer(_image_):
     with Image.open(_image_) as img:
         width, height = img.size
