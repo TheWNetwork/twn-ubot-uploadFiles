@@ -37,10 +37,34 @@ def file_list(path, sett):
     return sett
 
 
-def resizer(_image_):
+def resizer2(_image_):
     img = Image.open(_image_)
-    newname = str(_image_).split('.')[0] + "_resize." + str(_image_).split('.')[1]
+    path_, ext_ = os.path.splitext(_image_)
+    newname = path_+"lite"+ext_
+    # newname = str(_image_).split('.')[0] + "_resize." + str(_image_).split('.')[1]
     img.save(newname, optimize=True, quality=85)
+    return newname
+
+
+def resizer(_image_):
+    with Image.open(_image_) as img:
+        width, height = img.size
+        print(f"Width={width} - Height={height}")
+        img = img.convert("RGB")
+
+    if width * height > 5242880 or width > 4096 or height > 4096:
+        new_width, new_height = width, height
+        while new_width * new_height > 5242880 or new_width > 4096 or new_height > 4096:
+            new_width = int(new_width * 0.9)
+            new_height = int(new_height * 0.9)
+
+        resized_img = img.resize((new_width, new_height))
+    else:
+        resized_img = img
+
+    path_, ext_ = os.path.splitext(_image_)
+    newname = path_+"lite"+ext_
+    resized_img.save(newname)
     return newname
 
 
