@@ -1,6 +1,6 @@
 import os
 import pathlib
-
+from PIL import Image
 from .config import Config
 import datetime
 import logging
@@ -14,33 +14,40 @@ app = Client(
     api_hash=Config.api_hash,
 )
 
-# Keep track of the progress while uploading
+
 def progress(current, total):
     percent = 100 * (current / total)
     bar = '▋' * int(percent) + '-' * (100 - int(percent))
     print("\r", f'\r[{bar}] {round(percent, 2)}%', end='')
+
 
 def get_file_size_in_mb(file_path):
     stat_info = os.stat(file_path)
     size = stat_info.st_size / 1024 / 1024
     return int(round(size, 2))
 
-def file_list(path, setT):
+
+def file_list(path, sett):
     pathlib.Path(path)
     for filepath in pathlib.Path(path).glob("**/*"):
         if os.path.isdir(filepath):
-            file_list(filepath, setT)
+            file_list(filepath, sett)
         else:
-            setT.add(str(filepath.parent)+"/"+str(filepath.name))
-    return setT
+            sett.add(str(filepath.parent) + "/" + str(filepath.name))
+    return sett
 
-# Variables
-#DOCUMENT_ROOT="../downloads/"
-filename = []
+
+def resizer(_image_):
+    img = Image.open(_image_)
+    newname = str(_image_).split('.')[0] + "_resize." + str(_image_).split('.')[1]
+    img.save(newname, optimize=True, quality=85)
+    return newname
+
+
 async def main():
     async with app:
+
         filename = sorted(list(file_list(Config.document_root, set())))
-        print(len(filename))
 
         if Config.start_date:
             schedule = datetime.datetime.strptime(Config.start_date, '%Y-%m-%d %H:%M:%S')
@@ -50,14 +57,12 @@ async def main():
         counter = len(filename)
         curr = 0
         in_exe = False
-        n_file=[]
+        n_file = []
+        n_file_raw = []
 
         order_by_extension = ['jpg', 'jpeg', 'png']
         keys = {k: v for v, k in enumerate(order_by_extension)}
-        filename = sorted(filename, key=lambda x: keys.get(str(x).split('.')[1], float('inf')))
-
-        # for f in filename:
-        #    print(str(f).split('.')[1])
+        filename = sorted(filename, key=lambda y: keys.get(str(y).split('.')[1], float('inf')))
 
         for x in filename:
             if not in_exe:
@@ -77,33 +82,47 @@ async def main():
                 n_extension = filename[curr].split('.')[-1]
             except IndexError:
                 n_extension = None
-
-            if extension == 'jpg' or extension == 'png' or extension == 'jpeg':
+            if extension.lower() in {'jpg', 'png', 'jpeg'}:
+                x_resize = resizer(x)
                 if n_extension == extension and len(n_file) <= 8:
                     if len(n_file) == 0:
-                        n_file.append(InputMediaPhoto(x, caption=Config.caption, parse_mode=enums.ParseMode.HTML))
+                        n_file.append(InputMediaPhoto(x_resize, caption=Config.caption, parse_mode=enums.ParseMode.HTML))
+                        n_file_raw.append(InputMediaDocument(x, parse_mode=enums.ParseMode.HTML))
                     else:
-                        n_file.append(InputMediaPhoto(x))
+                        n_file.append(InputMediaPhoto(x_resize))
+                        n_file_raw.append(InputMediaDocument(x))
                     in_exe = True
                 else:
                     if len(n_file) > 0:
-                        n_file.append(InputMediaPhoto(x))
+                        n_file.append(InputMediaPhoto(x_resize))
+                        n_file_raw.append(InputMediaDocument(x))
                         await app.send_media_group(
                             chat_id=int(Config.chat_id),
                             media=n_file,
                             schedule_date=schedule
                         )
+                        await app.send_media_group(
+                            chat_id=int(Config.chat_id),
+                            media=n_file_raw,
+                            schedule_date=schedule
+                        )
                         n_file = []
+                        n_file_raw = []
                     else:
                         await app.send_photo(
                             chat_id=int(Config.chat_id),
-                            photo=x,
+                            photo=x_resize,
                             schedule_date=schedule,
                             caption=Config.caption,
                             parse_mode=enums.ParseMode.HTML
                         )
-
-            elif extension == 'mp4' or extension == 'mkv' or extension == 'avi' or extension == 'mov':
+                        await app.send_document(
+                            chat_id=int(Config.chat_id),
+                            document=x,
+                            schedule_date=schedule,
+                            parse_mode=enums.ParseMode.HTML
+                        )
+            elif extension.lower() in {'mp4', 'mkv', 'avi', 'mov'}:
                 if n_extension == extension and len(n_file) <= 8:
                     if len(n_file) == 0:
                         n_file.append(InputMediaVideo(x, caption=Config.caption, parse_mode=enums.ParseMode.HTML))
