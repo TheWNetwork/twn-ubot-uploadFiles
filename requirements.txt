@@ -2,3 +2,4 @@
 tgcrypto==1.2.4
 python-dotenv~=0.20.0
 config==0.5.1
+Pillow~=9.5.0
