@@ -1,11 +1,15 @@
 import os
+import cv2
+import logging
 import pathlib
+import imageio
+import datetime
 from PIL import Image
 from .config import Config
-import datetime
-import logging
 from pyrogram import Client, enums
+from moviepy.video.io.VideoFileClip import VideoFileClip
 from pyrogram.types import InputMediaPhoto, InputMediaVideo, InputMediaDocument
+
 
 logging.basicConfig(level=logging.ERROR)
 app = Client(
@@ -36,9 +40,20 @@ def file_list(path, sett):
             sett.add(str(filepath.parent) + "/" + str(filepath.name))
     return sett
 
+
+def resizer2(_image_):
+    img = Image.open(_image_)
+    path_, ext_ = os.path.splitext(_image_)
+    newname = path_+"lite"+ext_
+    # newname = str(_image_).split('.')[0] + "_resize." + str(_image_).split('.')[1]
+    img.save(newname, optimize=True, quality=85)
+    return newname
+
+
 def resizer(_image_):
     with Image.open(_image_) as img:
         width, height = img.size
+        print(f"Width={width} - Height={height}")
         img = img.convert("RGB")
 
     if width * height > 5242880 or width > 4096 or height > 4096:
@@ -56,6 +71,55 @@ def resizer(_image_):
     resized_img.save(newname)
     return newname
 
+
+def thumbail_(_video_):
+    path_, ext_ = os.path.splitext(_video_)
+    namethumb = path_+".jpg"
+    if ext_.lower() == ".mp4":
+        print("mp4")
+        # Abrir el video
+        cap = cv2.VideoCapture(_video_)
+        # Obtener el número de fotogramas
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Establecer el fotograma alrededor del cual queremos tomar la miniatura
+        frame_to_capture = int(total_frames / 3)
+        # Establecer la posición del fotograma
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_to_capture)
+        # Leer el fotograma
+        ret, frame = cap.read()
+        # Guardar la miniatura como imagen
+        cv2.imwrite(namethumb, frame)
+        # Liberar los recursos
+        cap.release()
+    elif ext_.lower() == ".mkv":
+        print("mkv")
+        # Abrir el archivo MKV
+        video = VideoFileClip(_video_)
+        # Obtener la miniatura en el segundo 5 del video
+        thumbnail = video.get_frame(20)
+        # Guardar la miniatura como imagen
+        imageio.imwrite(namethumb, thumbnail)
+        # Liberar los recursos
+        video.close()
+    elif ext_.lower() == ".mov":
+        print("mov")
+        # Abrir el archivo MOV
+        try:
+            video = VideoFileClip(_video_)
+            # Obtener la miniatura en el segundo 5 del video
+            thumbnail = video.get_frame(5)
+            # Guardar la miniatura como imagen
+            #thumbnail.save_frame(newname)
+            #np.savetxt('thumbnail.jpg', thumbnail)
+            imageio.imwrite(namethumb, thumbnail)
+            video.write_videofile(path_+".mp4")
+            # Liberar los recursos
+            video.close()
+            print("El archivo MOV parece estar bien.")
+        except:
+            print("El archivo MOV parece estar dañado.")
+            return None
+    return namethumb
 
 async def main():
     async with app:
@@ -136,15 +200,22 @@ async def main():
                             parse_mode=enums.ParseMode.HTML
                         )
             elif extension.lower() in {'mp4', 'mkv', 'avi', 'mov'}:
+                _thumbs_ = thumbail_(x)
+                if extension.lower()=="mov":
+                    if _thumbs_ == None:
+                        print(f"pass video corrupted:{x}")
+                        continue
+                    path_, ext_ = os.path.splitext(x)
+                    x = path_+".mp4"
                 if n_extension == extension and len(n_file) <= 8:
                     if len(n_file) == 0:
-                        n_file.append(InputMediaVideo(x, caption=Config.caption, parse_mode=enums.ParseMode.HTML))
+                        n_file.append(InputMediaVideo(x, thumb=_thumbs_, caption=Config.caption, parse_mode=enums.ParseMode.HTML))
                     else:
-                        n_file.append(InputMediaVideo(x))
+                        n_file.append(InputMediaVideo(x, thumb=_thumbs_))
                     in_exe = True
                 else:
                     if len(n_file) > 0:
-                        n_file.append(InputMediaVideo(x))
+                        n_file.append(InputMediaVideo(x, thumb=_thumbs_))
                         await app.send_media_group(
                             chat_id=int(Config.chat_id),
                             media=n_file,
@@ -155,6 +226,7 @@ async def main():
                         await app.send_video(
                             chat_id=int(Config.chat_id),
                             video=x,
+                            thumb=_thumbs_,
                             schedule_date=schedule,
                             caption=Config.caption,
                             progress=progress,
